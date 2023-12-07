@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/morgan": "^1.9.9",
     "nodemon": "^3.0.1",
@@ -9,6 +10,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.6.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "morgan": "^1.10.0"
@@ -19,8 +21,8 @@
   "scripts": {
     "api:start": "ts-node src/app.ts",
     "api:dev": "nodemon src/app.ts",
-		"prisma:create": "prisma db push",
-		"prisma:generate": "prisma generate"
+    "prisma:create": "prisma db push",
+    "prisma:generate": "prisma generate"
   },
   "author": "Storm",
   "license": "ISC",
