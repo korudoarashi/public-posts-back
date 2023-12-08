@@ -56,7 +56,8 @@ router.put('/update', async (req, res) => {
 		}, 
 		data: {
 			title,
-			content
+			content,
+			updated: true
 		}
 	});
 
