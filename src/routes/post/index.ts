@@ -1,86 +1,123 @@
 import { Router } from 'express';
 import prismaClient from '../../databank';
+import loggedMiddleware from '../../middleware/user/loggedMiddleware';
+import { RequireModelDataTarget, requiresModel } from '../../middleware/model/requiresModel';
+import { PostModel } from '../../validators/models/post';
 
 const router = Router();
 
+router.use(loggedMiddleware());
+
 router.get('/', async (req, res) => {
-	const posts = await prismaClient.post.findMany({});
-	
-	res.status(200).send({ posts });
-});
+	const {
+		user
+	} = res.locals;
 
-router.get('/:id', async (req, res) => {
-	const { id } = req.params;
-
-	const post = await prismaClient.post.findFirst({
+	const posts = await prismaClient.post.findMany({
 		where: {
-			id
+			OR: [
+				{
+					personal: false
+				},
+				{
+					userId: user.id
+				}
+			]
 		}
 	});
 
-	if(!post)
-		return res.status(404).send({ post: null });
-
-	res.status(200).send({ post });
+	res.status(200).send({ success: true, posts });
 });
 
-router.post('/create', async (req, res) => {
+router.get('/:id', requiresModel<PostModel>(PostModel, 'post', { id: '' }, { dataTarget: RequireModelDataTarget.Params }), async (req, res) => {
 	const {
-		title,
-		content
-	} = req.body;
+		user,
+		post
+	} = res.locals;
+
+	const searchedPost = await prismaClient.post.findFirst({
+		where: {
+			OR: [
+				{
+					id: post.id,
+					personal: false
+				},
+				{
+					id: post.id,
+					userId: user.id
+				}
+			],
+		}
+	});
+
+	if(!searchedPost)
+		return res.status(404).send({ success: false, post: null });
+
+	res.status(200).send({ success: true, post: searchedPost });
+});
+
+router.post('/create', requiresModel<PostModel>(PostModel, 'post', { title: '', content: '', personal: false }), async (req, res) => {
+	const {
+		user,
+		post
+	} = res.locals;
 
 	const newPost = await prismaClient.post.create({
 		data: {
-			title,
-			content
+			...post,
+			user: {
+				connect: {
+					id: user.id
+				}
+			}
 		}
 	});
 
-	res.status(200).send({ post: newPost });
+	res.status(200).send({ success: true, post: newPost });
 });
 
-router.put('/update', async (req, res) => {
+router.put('/update', requiresModel<PostModel>(PostModel, 'post', { id: '', title: undefined, content: undefined, personal: undefined }), async (req, res) => {
 	const {
-		id,
-		title,
-		content
-	} = req.body;
+		post,
+		user
+	} = res.locals;
 
-	if(!title && !content) 
-		return res.status(400).send({ updated: false });
+	if(!post.id)
+		return res.status(400).send({ success: false });
 
 	const updatedPost = await prismaClient.post.updateMany({
 		where: {
-			id
-		}, 
+			id: post.id,
+			userId: user.id
+		},
 		data: {
-			title,
-			content,
-			updated: true
+			...post,
+			private: undefined
 		}
 	});
 
 	if(!updatedPost.count)
-		return res.status(404).send({ updated: false });
-	res.status(200).send({ updated: true });
+		return res.status(404).send({ success: false });
+	res.status(200).send({ success: true });
 });
 
-router.delete('/delete', async (req, res) => {
+router.delete('/delete', requiresModel<PostModel>(PostModel, 'post', { id: '' }), async (req, res) => {
 	const {
-		id
-	} = req.body;
+		post,
+		user
+	} = res.locals;
 
 	const deletedPost = await prismaClient.post.deleteMany({
 		where: {
-			id
+			id: post.id,
+			userId: user.id
 		}
 	});
 
 	if(!deletedPost.count)
-		return res.status(404).send({ deleted: false });
+		return res.status(404).send({ success: false });
 
-	res.status(200).send({ deleted: true });
+	res.status(200).send({ success: true });
 });
 
 export default router;
